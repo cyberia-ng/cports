@@ -1,0 +1,101 @@
+diff --git a/runtime/doc/treesitter.txt b/runtime/doc/treesitter.txt
+index 9f225dc6dd..643a99439a 100644
+--- a/runtime/doc/treesitter.txt
++++ b/runtime/doc/treesitter.txt
+@@ -1150,6 +1150,16 @@ node_contains({node}, {range})                *vim.treesitter.node_contains()*
+     Return: ~
+         (`boolean`) True if the {node} contains the {range}
+ 
++select({target}, {count})                            *vim.treesitter.select()*
++    Starts or adjusts a |Visual| selection at cursor, based on tree nodes. The
++    `target` parameter decides the selection behavior.
++
++    Parameters: ~
++      • {target}  (`'parent'|'child'|'next'|'prev'|'extend_next'|'extend_prev'`)
++                  Decides the selection behavior.
++      • {count}   (`integer?`) (default: 1) Expand or adjust the selection
++                  this many times.
++
+ start({bufnr}, {lang})                                *vim.treesitter.start()*
+     Starts treesitter highlighting for a buffer
+ 
+diff --git a/runtime/lua/vim/treesitter.lua b/runtime/lua/vim/treesitter.lua
+index 311e69389a..93f0f973e0 100644
+--- a/runtime/lua/vim/treesitter.lua
++++ b/runtime/lua/vim/treesitter.lua
+@@ -12,6 +12,7 @@ local M = vim._defer_require('vim.treesitter', {
+   language = ..., --- @module 'vim.treesitter.language'
+   languagetree = ..., --- @module 'vim.treesitter.languagetree'
+   query = ..., --- @module 'vim.treesitter.query'
++  _select = ..., --- @module 'vim.treesitter._select'
+ })
+ 
+ local LanguageTree = M.languagetree
+@@ -501,4 +502,31 @@ function M.foldexpr(lnum)
+   return M._fold.foldexpr(lnum)
+ end
+ 
++--- Starts or adjusts a |Visual| selection at cursor, based on tree nodes. The `target` parameter
++--- decides the selection behavior.
++---
++---@param target 'parent'|'child'|'next'|'prev'|'extend_next'|'extend_prev' Decides the selection behavior.
++---@param count? integer (default: 1) Expand or adjust the selection this many times.
++function M.select(target, count)
++  vim.validate('target', target, 'string')
++  vim.validate('count', count, 'number', true)
++  count = count or 1
++
++  if target == 'parent' then
++    return M._select.select_parent(count)
++  elseif target == 'child' then
++    return M._select.select_child(count)
++  elseif target == 'next' then
++    return M._select.select_next(count)
++  elseif target == 'prev' then
++    return M._select.select_prev(count)
++  elseif target == 'extend_next' then
++    return M._select.select_grow_next(count)
++  elseif target == 'extend_prev' then
++    return M._select.select_grow_prev(count)
++  else
++    error(('Invalid target: %s'):format(target))
++  end
++end
++
+ return M
+diff --git a/test/functional/treesitter/select_spec.lua b/test/functional/treesitter/select_spec.lua
+index 7f7df9a464..f728c2566e 100644
+--- a/test/functional/treesitter/select_spec.lua
++++ b/test/functional/treesitter/select_spec.lua
+@@ -23,14 +23,26 @@ local function set_filetype(ft)
+   api.nvim_set_option_value('filetype', ft, { buf = 0 })
+ end
+ 
+-local function treeselect(cmd_, ...)
++local function treeselect(cmd_, count_)
+   if cmd_ == 'select_node' then
+-    cmd_ = 'select_child'
++    cmd_ = 'child'
++  elseif cmd_ == 'select_child' then
++    cmd_ = 'child'
++  elseif cmd_ == 'select_parent' then
++    cmd_ = 'parent'
++  elseif cmd_ == 'select_next' then
++    cmd_ = 'next'
++  elseif cmd_ == 'select_prev' then
++    cmd_ = 'prev'
++  elseif cmd_ == 'select_grow_next' then
++    cmd_ = 'extend_next'
++  elseif cmd_ == 'select_grow_prev' then
++    cmd_ = 'extend_prev'
+   end
+ 
+-  exec_lua(function(cmd, ...)
+-    require 'vim.treesitter._select'[cmd](...)
+-  end, cmd_, ...)
++  exec_lua(function(cmd, count)
++    vim.treesitter.select(cmd, count)
++  end, cmd_, count_)
+ end
+ 
+ describe('treesitter incremental-selection', function()
