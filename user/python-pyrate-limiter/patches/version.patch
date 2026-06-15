@@ -1,0 +1,26 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index 33f1097..b16c347 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,6 +1,6 @@
+ [project]
+ name = "pyrate-limiter"
+-dynamic = ["version"]
++version = "4.4.0"
+ description = "Python Rate-Limiter using Leaky-Bucket Algorithm"
+ authors = [{ name = "vutr", email = "me@vutr.io" }]
+ requires-python = ">=3.10"
+@@ -95,12 +95,9 @@ output = 'test-reports/coverage.xml'
+ context = 7
+
+ [build-system]
+-requires = ["hatchling", "uv-dynamic-versioning"]
++requires = ["hatchling"]
+ build-backend = "hatchling.build"
+
+-[tool.hatch.version]
+-source = "uv-dynamic-versioning"
+-
+ [tool.hatch.build.targets.sdist]
+ include = [
+     "pyrate_limiter",
